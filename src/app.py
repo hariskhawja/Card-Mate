@@ -25,6 +25,7 @@ pipeline = None
 pipeline_thread = None
 
 
+
 # ---------- Helpers ----------
 def my_sink(result, video_frame):
     global latest_result
@@ -35,6 +36,7 @@ def my_sink(result, video_frame):
     # print(result)
 
 def speech_loop():
+    global player_cards
     r = sr.Recognizer()
     mic = sr.Microphone()
     with mic as source:
@@ -63,13 +65,18 @@ def speech_loop():
                     print('new hand')
 
                     res = get_latest_result()
-                    print(res)
-                
-                if text.lower() == 'get card':
-                    print('get card')
+                    player_cards = res
+                    get_player_cards_tts()
+
+                if text.lower() == 'get hand':
+                    print(player_cards)
+                    get_player_cards_tts()
 
                 if text.lower() == 'discard card':
                     print('discard card')
+                
+                if text.lower() == 'test':
+                    text_to_speech("This is a test of the text to speech system.")
 
             except sr.WaitTimeoutError:
                 # No speech detected within timeout
@@ -82,6 +89,25 @@ def speech_loop():
 
         time.sleep(1)  # Delay between listening cycles
 
+def get_player_cards_tts():
+    text = ""
+    if not player_cards:
+        text_to_speech("No cards found.")
+        return
+    for card in player_cards:
+        num_word = number_word_map[card[0]]
+        text += f"{num_word} of {card[1]}, "
+    text_to_speech(text)
+    return player_cards
+
+def text_to_speech(text):
+    engine = pyttsx3.init()
+    engine.setProperty('volume', 1)  # Set to 100% volume (0.0 to 1.0)
+    engine.setProperty('rate', 150)  # Set to 150 words per minute
+    voices = engine.getProperty('voices')
+    engine.setProperty('voice', voices[1].id)
+    engine.say(text)
+    engine.runAndWait()
 
 # ---------- FastAPI Endpoints ----------
 # FastAPI entrypoint upon startup
