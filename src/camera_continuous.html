@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Card Mate -- Real-Time Continuous Card Recognition</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .detection-info {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .detection-info div {
+            margin: 8px 0;
+            font-size: 16px;
+        }
+        
+        #detectionMode {
+            color: #007bff;
+            font-weight: bold;
+        }
+        
+        #cameraMode {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .status {
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .status-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        /* Results styling */
+        .results-container {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .results-container h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .detection-count {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin: 15px 0;
+        }
+        
+        .cards-detected {
+            font-size: 18px;
+            margin: 15px 0;
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            min-height: 40px;
+        }
+        
+        .card-item {
+            display: inline-block;
+            margin: 5px;
+            padding: 8px 12px;
+            background-color: #fff;
+            border-radius: 5px;
+            border: 1px solid #007bff;
+            font-weight: bold;
+        }
+        
+        .card-hearts, .card-diamonds {
+            color: #dc3545;
+        }
+        
+        .card-spades, .card-clubs {
+            color: #212529;
+        }
+        
+        .connection-status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .connection-status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .connection-status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .connection-status.connecting {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .note {
+            background-color: #e2e3e5;
+            border: 1px solid #d6d8db;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            font-style: italic;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Card Mate -- Real-Time Continuous Card Recognition</h1>
+        
+        <div id="status" class="status"></div>
+        
+        <div class="detection-info">
+            <div><strong>Detection Mode:</strong> <span id="detectionMode">Continuous Real-Time</span></div>
+            <div><strong>Camera:</strong> <span id="cameraMode">Server Camera (Main/Rear)</span></div>
+            <div><strong>Connection:</strong> <span id="connectionStatus" class="connection-status disconnected">Connecting...</span></div>
+        </div>
+        
+        <div class="note">
+            <strong>Note:</strong> This interface displays real-time card detection results from the server's continuous video processing. 
+            The server automatically uses the main camera (camera 0) for detection. No manual controls needed - just watch the live results below!
+        </div>
+        
+        <div class="results-container">
+            <h2>Live Detection Results</h2>
+            <div class="detection-count">
+                Cards Detected: <span id="detectionCount">0</span>
+            </div>
+            <div class="cards-detected" id="cardsDetected">
+                Waiting for detection results...
+            </div>
+            <div style="margin-top: 15px; font-size: 14px; color: #6c757d;">
+                <strong>Last Update:</strong> <span id="lastUpdate">Never</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const status = document.getElementById('status');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const detectionCount = document.getElementById('detectionCount');
+        const cardsDetected = document.getElementById('cardsDetected');
+        const lastUpdate = document.getElementById('lastUpdate');
+        
+        // WebSocket connection
+        let detectionSocket = null;
+        let lastUpdateTime = 0;
+        let isConnected = false;
+        
+        // Show status message
+        function showStatus(message, type = 'info') {
+            status.textContent = message;
+            status.className = `status status-${type}`;
+            
+            // Clear status after 5 seconds for non-error messages
+            if (type !== 'error') {
+                setTimeout(() => {
+                    status.textContent = '';
+                    status.className = 'status';
+                }, 5000);
+            }
+        }
+        
+        // Update connection status display
+        function updateConnectionStatus(statusText, isConnectedState) {
+            connectionStatus.textContent = statusText;
+            isConnected = isConnectedState;
+            
+            if (isConnected) {
+                connectionStatus.className = 'connection-status connected';
+            } else if (statusText === 'Connecting...') {
+                connectionStatus.className = 'connection-status connecting';
+            } else {
+                connectionStatus.className = 'connection-status disconnected';
+            }
+        }
+        
+        // Connect to detection stream
+        function connectToDetectionStream() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/detections`;
+            
+            updateConnectionStatus('Connecting...', false);
+            showStatus('Connecting to continuous detection stream...', 'info');
+            
+            try {
+                detectionSocket = new WebSocket(wsUrl);
+                
+                detectionSocket.onopen = function(event) {
+                    console.log('Connected to real-time detection stream');
+                    updateConnectionStatus('Connected', true);
+                    showStatus('Connected to continuous detection system', 'success');
+                };
+                
+                detectionSocket.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        updateDetectionResults(data);
+                    } catch (error) {
+                        console.error('Error parsing detection data:', error);
+                        showStatus('Error parsing detection data', 'error');
+                    }
+                };
+                
+                detectionSocket.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                    updateConnectionStatus('Connection Error', false);
+                    showStatus('Connection error with detection system', 'error');
+                };
+                
+                detectionSocket.onclose = function(event) {
+                    console.log('Detection stream disconnected');
+                    updateConnectionStatus('Disconnected', false);
+                    showStatus('Disconnected from detection system', 'warning');
+                    
+                    // Attempt to reconnect after 3 seconds
+                    setTimeout(() => {
+                        if (!detectionSocket || detectionSocket.readyState === WebSocket.CLOSED) {
+                            console.log('Attempting to reconnect to detection stream...');
+                            connectToDetectionStream();
+                        }
+                    }, 3000);
+                };
+                
+            } catch (error) {
+                console.error('Error creating WebSocket connection:', error);
+                updateConnectionStatus('Failed to Connect', false);
+                showStatus('Failed to connect to detection system', 'error');
+            }
+        }
+        
+        // Update detection results display
+        function updateDetectionResults(data) {
+            // Throttle updates to avoid overwhelming the UI
+            const currentTime = Date.now();
+            if (currentTime - lastUpdateTime < 100) { // Max 10 FPS
+                return;
+            }
+            lastUpdateTime = currentTime;
+            
+            // Update detection count
+            if (data.count !== undefined) {
+                detectionCount.textContent = data.count;
+            }
+            
+            // Update cards detected display
+            if (data.cards && Array.isArray(data.cards) && data.cards.length > 0) {
+                const cardElements = data.cards.map(card => {
+                    let cardText = '';
+                    let cardClass = 'card-item';
+                    
+                    if (Array.isArray(card) && card.length >= 2) {
+                        const [num, suit] = card;
+                        const numText = getCardNumber(num);
+                        cardText = `${numText} of ${suit}`;
+                        
+                        // Add suit-specific styling
+                        if (suit === 'Hearts' || suit === 'Diamonds') {
+                            cardClass += ' card-hearts';
+                        } else {
+                            cardClass += ' card-spades';
+                        }
+                    } else if (typeof card === 'string') {
+                        cardText = card;
+                    } else {
+                        cardText = 'Unknown card';
+                    }
+                    
+                    return `<span class="${cardClass}">${cardText}</span>`;
+                }).join(' ');
+                
+                cardsDetected.innerHTML = cardElements;
+            } else if (data.count === 0) {
+                cardsDetected.innerHTML = '<span style="color: #6c757d; font-style: italic;">No cards detected</span>';
+            }
+            
+            // Update last update time
+            lastUpdate.textContent = new Date().toLocaleTimeString();
+            
+            // Show real-time status for successful detections
+            if (data.count > 0) {
+                showStatus(`Live detection: ${data.count} card(s) found`, 'success');
+            }
+        }
+        
+        // Convert card number to readable text
+        function getCardNumber(num) {
+            const numberMap = {
+                1: "Ace", 2: "Two", 3: "Three", 4: "Four", 5: "Five",
+                6: "Six", 7: "Seven", 8: "Eight", 9: "Nine", 10: "Ten",
+                11: "Jack", 12: "Queen", 13: "King"
+            };
+            return numberMap[num] || num.toString();
+        }
+        
+        // Initialize connection when page loads
+        window.addEventListener('load', () => {
+            showStatus('Initializing continuous detection interface...', 'info');
+            setTimeout(() => {
+                connectToDetectionStream();
+            }, 1000);
+        });
+        
+        // Clean up connection when page unloads
+        window.addEventListener('beforeunload', () => {
+            if (detectionSocket) {
+                detectionSocket.close();
+            }
+        });
+        
+        // Show initial status
+        showStatus('Loading Card Mate continuous detection interface...', 'info');
+    </script>
+</body>
+</html>
