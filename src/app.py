@@ -65,24 +65,20 @@ def process_frame_with_workflow(frame):
             # Start processing
             pipeline.start()
             
-            # Wait for result with timeout
+            # Wait for result with timeout - REDUCED FREQUENCY
             timeout_counter = 0
             while not frame_result and timeout_counter < 30:  # 3 second timeout
-                time.sleep(0.1)
+                time.sleep(0.2)  # Increased sleep time to reduce frequency
                 timeout_counter += 1
             
             # Try to stop pipeline gracefully
             try:
-                # Try different methods to stop the pipeline
                 if hasattr(pipeline, 'stop'):
                     pipeline.stop()
                 elif hasattr(pipeline, 'terminate'):
                     pipeline.terminate()
                 elif hasattr(pipeline, 'close'):
                     pipeline.close()
-                else:
-                    # Pipeline will be garbage collected
-                    del pipeline
             except Exception as stop_error:
                 print(f"Warning: Could not stop pipeline gracefully: {stop_error}")
             
@@ -193,7 +189,7 @@ def parse_data(results):
 async def get_admin_page():
     """Serve FastAPI admin page at root path"""
     try:
-        with open(os.path.join(os.path.dirname(__file__), "admin.html"), "r") as file:
+        with open(os.path.join(os.path.dirname(__file__), "admin.html"), "r", encoding='utf-8') as file:
             content = file.read()
         return HTMLResponse(content=content)
     except Exception as e:
@@ -203,7 +199,7 @@ async def get_admin_page():
 @app.get("/admin.html", response_class=HTMLResponse)
 async def get_admin_html_direct():
     try:
-        with open(os.path.join(os.path.dirname(__file__), "admin.html"), "r") as file:
+        with open(os.path.join(os.path.dirname(__file__), "admin.html"), "r", encoding='utf-8') as file:
             content = file.read()
         return HTMLResponse(content=content)
     except Exception as e:
@@ -212,7 +208,7 @@ async def get_admin_html_direct():
 @app.get("/camera.html", response_class=HTMLResponse)
 async def get_camera_html_direct():
     try:
-        with open(os.path.join(os.path.dirname(__file__), "camera.html"), "r") as file:
+        with open(os.path.join(os.path.dirname(__file__), "camera.html"), "r", encoding='utf-8') as file:
             content = file.read()
         return HTMLResponse(content=content)
     except Exception as e:

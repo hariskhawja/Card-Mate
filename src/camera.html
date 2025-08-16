@@ -485,7 +485,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>📱 Card-Mate Mobile Detection</h1>
+        <h1>📱 Card-Mate</h1>
         
         <div id="status" class="status"></div>
         
@@ -700,7 +700,7 @@
             }
         }
         
-        // Capture frame and send for detection
+        // Capture frame and send for detection (LOW FREQUENCY APPROACH)
         function captureAndSendFrame() {
             if (!mediaStream || !isDetecting || !isConnected) {
                 return;
@@ -711,7 +711,7 @@
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
-                // Convert to base64 image
+                // Convert to base64 image with standard quality
                 const imageData = canvas.toDataURL('image/jpeg', 0.8);
                 const base64Data = imageData.split(',')[1];
                 
@@ -741,9 +741,9 @@
             // Connect to detection WebSocket
             connectToDetectionStream();
             
-            // Start sending frames for detection
+            // Start sending frames for detection with LOWER FREQUENCY
             isDetecting = true;
-            detectionInterval = setInterval(captureAndSendFrame, 200); // 5 FPS
+            detectionInterval = setInterval(captureAndSendFrame, 500); // 2 FPS - Lower frequency
             
             startDetectionBtn.disabled = true;
             stopDetectionBtn.disabled = false;
