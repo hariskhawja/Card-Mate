@@ -3,4 +3,8 @@ __pycache__/
 src/app_original.py
 src/test_workflow.py
 src/test_continuous.html
-.env
+
+*env
+.vscode
+commands.txt
+/Card-Mate
