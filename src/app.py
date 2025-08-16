@@ -42,6 +42,20 @@ def speech_loop():
     with mic as source:
         r.adjust_for_ambient_noise(source)  # optional, helps with background noise
     while True:
+        while has_pair():
+            print("Here")
+            pair = has_pair()
+            print(f"Found pair: {pair}")
+            c = []
+            indices = []
+            for i in range(len(player_cards)):
+                card = player_cards[i]
+                if len(c) >= 2:
+                    break
+                if card[0] == pair:
+                    c.append(card)
+                    indices.append(i)
+            discard_pair_tts(c, indices)
         with mic as source:
             try:
                 audio = r.listen(source)  # waits max 5s for speech
@@ -50,18 +64,19 @@ def speech_loop():
                 print(text)
 
                 if 'got a new card' in text.lower():
-                    print("new card")
+                    # print("new card")
 
                     try:
                         res = get_latest_result()
 
-                        get_card_tts(res[0])  
+                        get_card_tts(res[0])
+
                     except Exception as e:
                         print(f"Error: {e}")                
                     print(player_cards)
 
                 if 'got a new hand' in text.lower():
-                    print('new hand')
+                    # print('new hand')
 
                     res = get_latest_result()
                     player_cards = res
@@ -70,11 +85,15 @@ def speech_loop():
                 if 'get my hand' in text.lower():
                     print(player_cards)
                     get_player_cards_tts()
-                    text_to_speech("no i dont want to get your hand, that's disgusting")
 
                 if 'remove card' in text.lower():
-                    print('discard card')
-                    text_to_speech("discarded the card for you sir.")
+                    try:
+                        res = get_latest_result()
+
+                        discard_card_tts(res[0])  
+                    except Exception as e:
+                        text_to_speech("Could not detect card.")
+                        print(f"Error: {e}")   
 
                 
                 if 'this is a test' in text.lower():
@@ -91,6 +110,16 @@ def speech_loop():
                 print(f"Could not request results; {e}")
 
         # time.sleep(0.2)  # Delay between listening cycles
+
+        
+
+def has_pair():
+    count = {}
+    for card in player_cards:
+        count[card[0]] = count.get(card[0], 0) + 1
+        if count[card[0]] >= 2:
+            return card[0]
+    return False
 
 def get_player_cards_tts():
     text = ""
@@ -113,6 +142,24 @@ def get_card_tts(card):
     else:
         text_to_speech(f"you got {text}")
         player_cards.append(card)
+
+def discard_card_tts(card):
+    num_word = number_word_map[card[0]]
+    text = f"{num_word} of {card[1]}, "
+    if card in player_cards:
+        ind = player_cards.index(card)
+        player_cards.remove(card)
+        text_to_speech(f"Discarded {text} at position {ind+1} from your hand")
+    else:
+        text_to_speech(f"You don't have {text} in your hand to discard")
+
+def discard_pair_tts(cards, indices):
+    if len(cards) != 2:
+        return
+    text_to_speech(f"You have a pair!")
+    text_to_speech(f"Discard {number_word_map[cards[0][0]]} of {cards[0][1]} and {number_word_map[cards[1][0]]} of {cards[1][1]} at positions {indices[0]+1} and {indices[1]+1} from your hand")
+    player_cards.remove(cards[0])
+    player_cards.remove(cards[1])
 
 def text_to_speech(text):
     engine = pyttsx3.init()
