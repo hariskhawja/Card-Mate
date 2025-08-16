@@ -13,6 +13,7 @@ import base64
 from pathlib import Path
 import speech_recognition as sr
 import pyttsx3
+import threading
 
 # Load environment variables
 load_dotenv()
@@ -157,7 +158,7 @@ def parse_workflow_data(results):
                 card = parse_card(class_name)
                 if card not in cards:
                     cards.append(card)
-                    
+                                    
             return cards
         else:
             # Fallback if format is different
@@ -201,7 +202,7 @@ async def get_admin_page():
         return HTMLResponse(content=content)
     except Exception as e:
         return HTMLResponse(content=f"Error loading admin.html: {str(e)}")
-=======
+
 pipeline_thread = None
 
 player_cards = []
@@ -223,7 +224,6 @@ def speech_loop():
         r.adjust_for_ambient_noise(source)  # optional, helps with background noise
     while True:
         while has_pair():
-            print("Here")
             pair = has_pair()
             print(f"Found pair: {pair}")
             c = []
@@ -244,7 +244,7 @@ def speech_loop():
                 print(text)
 
                 if 'got a new card' in text.lower():
-                    # print("new card")
+                    print("new card")
 
                     try:
                         res = get_latest_result()
@@ -252,7 +252,8 @@ def speech_loop():
                         get_card_tts(res[0])
 
                     except Exception as e:
-                        print(f"Error: {e}")                
+                        print(f"Error: {e}")  
+                                      
                     print(player_cards)
 
                 if 'got a new hand' in text.lower():
@@ -279,6 +280,13 @@ def speech_loop():
                 if 'this is a test' in text.lower():
                     print('test')
                     text_to_speech("This is a test of the text to speech system.")
+
+            except sr.WaitTimeoutError:
+                pass
+            except sr.UnknownValueError:
+                pass
+            except sr.RequestError as e:
+                print(f"Could not request results; {e}")
 
 # Serve static HTML files directly
 @app.get("/admin.html", response_class=HTMLResponse)
@@ -395,9 +403,9 @@ def startup_event():
 #     pipeline_thread = threading.Thread(target=pipeline.start, daemon=True)
 #     pipeline_thread.start()
 
-#     # --- Start the speech recognition loop ---
-#     speech_thread = threading.Thread(target=speech_loop, daemon=True)
-#     speech_thread.start()
+    # --- Start the speech recognition loop ---
+    speech_thread = threading.Thread(target=speech_loop, daemon=True)
+    speech_thread.start()
 
 # FastAPI exitpoint upon shutdown
 @app.on_event("shutdown")
@@ -465,33 +473,38 @@ def test_workflow():
         }
       
 @app.get("/backend-results")
-def get_latest_results():
+def get_latest_result():
     # print("latest_result: ", latest_result['count_objects'])
+    print("BACKEND LATEST RESULT")
+    print(latest_result)
     if 'count_objects' not in latest_result:
         return {"error": "No results available yet."}
 
     prev = []
 
-    threshold = 3 # We want the results to be the same for at least 3 ticks before moving on
+    threshold = 0 # We want the results to be the same for at least 3 ticks before moving on
     timeout = 30 # If there's nothing that's the same within 30 ticks, then move on
     i = 0
     t = 0
-    while t < timeout:
-        # print("i: ", i)
-        # print(f"Latest Result: {latest_result}")
-        if i >= threshold:
-            return cur
-        cur = parse_data(latest_result)
-        # print("Current Card: ", cur)
-        if cur != prev:
-            i = 0
-            prev = cur
-            continue
-        prev = cur
-        i += 1
-        t += 1
-        time.sleep(0.1)
-    return {"error": "Timeout."}
+
+    cur = parse_data(latest_result)
+    return cur
+    # while t < timeout:
+    #     # print("i: ", i)
+    #     # print(f"Latest Result: {latest_result}")
+    #     # cur = parse_data(latest_result)
+    #     if i >= threshold:
+    #         return cur
+    #     # print("Current Card: ", cur)
+    #     if cur != prev:
+    #         i = 0
+    #         prev = cur
+    #         continue
+    #     prev = cur
+    #     i += 1
+    #     t += 1
+    #     time.sleep(0.1)
+    # return {"error": "Timeout."}
 
 # Main endpoint to grab model results
 @app.get("/results")
@@ -599,6 +612,8 @@ def parse_data(results):
         if card in cards:
             continue
         cards.append(card)
+
+    return cards
 
 # WebSocket endpoint for real-time detection updates (legacy support)
 @app.websocket("/ws/detections")
