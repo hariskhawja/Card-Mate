@@ -48,6 +48,10 @@ def speech_loop():
                     print(latest_result)
                     # You could trigger some other logic here
 
+                if text.lower() == 'new hand':
+                    res = get_latest_result()
+                    print(res)
+
             except sr.WaitTimeoutError:
                 # No speech detected within timeout
                 pass
@@ -92,22 +96,50 @@ def shutdown_event():
 @app.get("/results")
 def get_latest_result():
     
-    print("latest_result: ", latest_result['count_objects'])
-    return latest_result['count_objects']
+    # print("latest_result: ", latest_result['count_objects'])
+    if 'count_objects' not in latest_result:
+        return {"error": "No results available yet."}
+
+    prev = []
+
+    threshold = 3 # We want the results to be the same for at least 3 ticks before moving on
+    timeout = 30 # If there's nothing that's the same within 30 ticks, then move on
+    i = 0
+    t = 0
+    while t < timeout:
+        # print("i: ", i)
+        # print(f"Latest Result: {latest_result}")
+        if i >= threshold:
+            return cur
+        cur = parse_data(latest_result)
+        # print("Current Card: ", cur)
+        if cur != prev:
+            i = 0
+            prev = cur
+            continue
+        prev = cur
+        i += 1
+        t += 1
+        time.sleep(0.1)
+    return {"error": "Timeout."}
 
 
 # Parse 'latest_results' for relevant data
 def parse_data(results):
     length = results['count_objects']
     predictions = results['predictions']
-    data = results['data']
+    coords = predictions.xyxy
+    data = predictions.data
     class_names = data['class_name']
+
+    all_data = [[a, b] for a, b in zip(coords, class_names)]
+    all_data.sort(key=lambda x: x[0][0])  # Sort x by x values
 
     cards = []
     
     for i in range(length):
-        x = predictions[i][0]
-        card = parse_card(class_names[i])
+        loc, class_name = all_data[i]
+        card = parse_card(class_name)
         if card in cards:
             continue
         cards.append(card)
@@ -160,7 +192,7 @@ card_suit_map = {
 # Index 0 = Num, Index 1 = Suit
 def parse_card(card):
     if len(card) == 3:
-        num, suit = card_number_map(card[0:2]), card_suit_map(card[-1])
+        num, suit = 10, card_suit_map[card[-1]]
     else:
-        num, suit = card_number_map(card[0]), card_suit_map(card[1])
+        num, suit = card_number_map[card[0]], card_suit_map[card[1]]
     return [num, suit]
