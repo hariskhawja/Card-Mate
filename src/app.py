@@ -4,6 +4,10 @@ import cv2
 import threading
 import time
 import speech_recognition as sr
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 # ---------- Configuration ----------
@@ -59,7 +63,7 @@ def speech_loop():
 def startup_event():
     global pipeline, pipeline_thread
     pipeline = InferencePipeline.init_with_workflow(
-        api_key="",
+        api_key=os.getenv("ROBOFLOW_KEY"),
         workspace_name="storm-nmwcn",
         workflow_id="detect-count-and-visualize",
         video_reference=0,
