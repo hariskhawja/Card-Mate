@@ -7,7 +7,7 @@ import time
 import os
 from dotenv import load_dotenv
 from pathlib import Path
-# import speech_recognition as sr
+import speech_recognition as sr
 
 
 # ---------- Configuration ----------
@@ -17,7 +17,6 @@ dotenv_path = Path(__file__).resolve().parents[1] / ".env"
 load_dotenv(dotenv_path)
 
 ROBOFLOW_API_KEY = os.environ.get("ROBOFLOW_API_KEY")
-print(ROBOFLOW_API_KEY)
 
 latest_result = {} # Store latest results so we can serve them over HTTP
 
@@ -32,35 +31,33 @@ def my_sink(result, video_frame):
     if result.get("output_image"):
         cv2.imshow("Workflow Image", result["output_image"].numpy_image)
         cv2.waitKey(1)
-    print(result)
+    # print(result)
 
-# def speech_loop():
-#     r = sr.Recognizer()
-#     mic = sr.Microphone()
-#     with mic as source:
-#         r.adjust_for_ambient_noise(source)  # optional, helps with background noise
-#     while True:
-#         with mic as source:
-#             print("Say something!")
-#             try:
-#                 audio = r.listen(source, timeout=5)  # waits max 5s for speech
-#                 text = r.recognize_google(audio)
-#                 print(f"YOU SAID: {text}")
+def speech_loop():
+    r = sr.Recognizer()
+    mic = sr.Microphone()
+    with mic as source:
+        r.adjust_for_ambient_noise(source)  # optional, helps with background noise
+    while True:
+        with mic as source:
+            try:
+                audio = r.listen(source, timeout=5)  # waits max 5s for speech
+                text = r.recognize_google(audio)
 
-#                 if text.lower() == 'new card':
-#                     print("NEW CARD detected!")
-#                     # You could trigger some other logic here
+                if text.lower() == 'new card':
+                    print(latest_result)
+                    # You could trigger some other logic here
 
-#             except sr.WaitTimeoutError:
-#                 # No speech detected within timeout
-#                 pass
-#             except sr.UnknownValueError:
-#                 # Speech was unintelligible
-#                 pass
-#             except sr.RequestError as e:
-#                 print(f"Could not request results; {e}")
+            except sr.WaitTimeoutError:
+                # No speech detected within timeout
+                pass
+            except sr.UnknownValueError:
+                # Speech was unintelligible
+                pass
+            except sr.RequestError as e:
+                print(f"Could not request results; {e}")
 
-#         time.sleep(1)  # Delay between listening cycles
+        time.sleep(1)  # Delay between listening cycles
 
 
 # ---------- FastAPI Endpoints ----------
@@ -80,6 +77,10 @@ def startup_event():
     # Run pipeline in a separate thread so FastAPI can still respond
     pipeline_thread = threading.Thread(target=pipeline.start, daemon=True)
     pipeline_thread.start()
+
+    # --- Start the speech recognition loop ---
+    speech_thread = threading.Thread(target=speech_loop, daemon=True)
+    speech_thread.start()
 
 # FastAPI exitpoint upon shutdown
 @app.on_event("shutdown")
