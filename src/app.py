@@ -3,11 +3,21 @@ from inference import InferencePipeline
 import cv2
 import threading
 import time
-import speech_recognition as sr
+
+import os
+from dotenv import load_dotenv
+from pathlib import Path
+# import speech_recognition as sr
 
 
 # ---------- Configuration ----------
 app = FastAPI()
+
+dotenv_path = Path(__file__).resolve().parents[1] / ".env"
+load_dotenv(dotenv_path)
+
+ROBOFLOW_API_KEY = os.environ.get("ROBOFLOW_API_KEY")
+print(ROBOFLOW_API_KEY)
 
 latest_result = {} # Store latest results so we can serve them over HTTP
 
@@ -24,33 +34,33 @@ def my_sink(result, video_frame):
         cv2.waitKey(1)
     print(result)
 
-def speech_loop():
-    r = sr.Recognizer()
-    mic = sr.Microphone()
-    with mic as source:
-        r.adjust_for_ambient_noise(source)  # optional, helps with background noise
-    while True:
-        with mic as source:
-            print("Say something!")
-            try:
-                audio = r.listen(source, timeout=5)  # waits max 5s for speech
-                text = r.recognize_google(audio)
-                print(f"YOU SAID: {text}")
+# def speech_loop():
+#     r = sr.Recognizer()
+#     mic = sr.Microphone()
+#     with mic as source:
+#         r.adjust_for_ambient_noise(source)  # optional, helps with background noise
+#     while True:
+#         with mic as source:
+#             print("Say something!")
+#             try:
+#                 audio = r.listen(source, timeout=5)  # waits max 5s for speech
+#                 text = r.recognize_google(audio)
+#                 print(f"YOU SAID: {text}")
 
-                if text.lower() == 'new card':
-                    print("NEW CARD detected!")
-                    # You could trigger some other logic here
+#                 if text.lower() == 'new card':
+#                     print("NEW CARD detected!")
+#                     # You could trigger some other logic here
 
-            except sr.WaitTimeoutError:
-                # No speech detected within timeout
-                pass
-            except sr.UnknownValueError:
-                # Speech was unintelligible
-                pass
-            except sr.RequestError as e:
-                print(f"Could not request results; {e}")
+#             except sr.WaitTimeoutError:
+#                 # No speech detected within timeout
+#                 pass
+#             except sr.UnknownValueError:
+#                 # Speech was unintelligible
+#                 pass
+#             except sr.RequestError as e:
+#                 print(f"Could not request results; {e}")
 
-        time.sleep(1)  # Delay between listening cycles
+#         time.sleep(1)  # Delay between listening cycles
 
 
 # ---------- FastAPI Endpoints ----------
@@ -59,7 +69,7 @@ def speech_loop():
 def startup_event():
     global pipeline, pipeline_thread
     pipeline = InferencePipeline.init_with_workflow(
-        api_key="",
+        api_key=ROBOFLOW_API_KEY,
         workspace_name="storm-nmwcn",
         workflow_id="detect-count-and-visualize",
         video_reference=0,
