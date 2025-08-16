@@ -1,6 +1,9 @@
+# FastAPI
 from fastapi import FastAPI, UploadFile, File, WebSocket
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
+
+# Roboflow Deps
 from inference import InferencePipeline
 import cv2
 import time
@@ -253,7 +256,7 @@ def speech_loop():
 
                     except Exception as e:
                         print(f"Error: {e}")  
-                                      
+
                     print(player_cards)
 
                 if 'got a new hand' in text.lower():
