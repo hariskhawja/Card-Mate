@@ -8,6 +8,7 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 import speech_recognition as sr
+import pyttsx3
 
 
 # ---------- Configuration ----------
@@ -45,12 +46,30 @@ def speech_loop():
                 text = r.recognize_google(audio)
 
                 if text.lower() == 'new card':
+                    print("new card")
+
+                    engine = pyttsx3.init()
+                    engine.setProperty('volume', 1) # Set to 80% volume (0.0 to 1.0)
+                    engine.setProperty('rate', 150) # Set to 150 words per minute
+                    voices = engine.getProperty('voices')
+                    engine.setProperty('voice', voices[1].id)
+                    engine.say("That is a Ace of spades!")
+                    engine.runAndWait()
+
                     print(latest_result)
                     # You could trigger some other logic here
 
                 if text.lower() == 'new hand':
+                    print('new hand')
+
                     res = get_latest_result()
                     print(res)
+                
+                if text.lower() == 'get card':
+                    print('get card')
+
+                if text.lower() == 'discard card':
+                    print('discard card')
 
             except sr.WaitTimeoutError:
                 # No speech detected within timeout
