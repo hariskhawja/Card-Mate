@@ -24,7 +24,7 @@ latest_result = {} # Store latest results so we can serve them over HTTP
 pipeline = None
 pipeline_thread = None
 
-
+player_cards = []
 
 # ---------- Helpers ----------
 def my_sink(result, video_frame):
@@ -44,38 +44,41 @@ def speech_loop():
     while True:
         with mic as source:
             try:
-                audio = r.listen(source, timeout=5)  # waits max 5s for speech
+                audio = r.listen(source)  # waits max 5s for speech
                 text = r.recognize_google(audio)
 
-                if text.lower() == 'new card':
+                print(text)
+
+                if 'got a new card' in text.lower():
                     print("new card")
 
-                    engine = pyttsx3.init()
-                    engine.setProperty('volume', 1) # Set to 80% volume (0.0 to 1.0)
-                    engine.setProperty('rate', 150) # Set to 150 words per minute
-                    voices = engine.getProperty('voices')
-                    engine.setProperty('voice', voices[1].id)
-                    engine.say("That is a Ace of spades!")
-                    engine.runAndWait()
+                    try:
+                        res = get_latest_result()
 
-                    print(latest_result)
-                    # You could trigger some other logic here
+                        get_card_tts(res[0])  
+                    except Exception as e:
+                        print(f"Error: {e}")                
+                    print(player_cards)
 
-                if text.lower() == 'new hand':
+                if 'got a new hand' in text.lower():
                     print('new hand')
 
                     res = get_latest_result()
                     player_cards = res
                     get_player_cards_tts()
 
-                if text.lower() == 'get hand':
+                if 'get my hand' in text.lower():
                     print(player_cards)
                     get_player_cards_tts()
+                    text_to_speech("no i dont want to get your hand, that's disgusting")
 
-                if text.lower() == 'discard card':
+                if 'remove card' in text.lower():
                     print('discard card')
+                    text_to_speech("discarded the card for you sir.")
+
                 
-                if text.lower() == 'test':
+                if 'this is a test' in text.lower():
+                    print('test')
                     text_to_speech("This is a test of the text to speech system.")
 
             except sr.WaitTimeoutError:
@@ -87,7 +90,7 @@ def speech_loop():
             except sr.RequestError as e:
                 print(f"Could not request results; {e}")
 
-        time.sleep(1)  # Delay between listening cycles
+        # time.sleep(0.2)  # Delay between listening cycles
 
 def get_player_cards_tts():
     text = ""
@@ -99,6 +102,17 @@ def get_player_cards_tts():
         text += f"{num_word} of {card[1]}, "
     text_to_speech(text)
     return player_cards
+
+def get_card_tts(card):
+    num_word = number_word_map[card[0]]
+    text = f"{num_word} of {card[1]}, "
+    
+    if card in player_cards:
+        text_to_speech(f"you already have {text}, in your hand")
+    
+    else:
+        text_to_speech(f"you got {text}")
+        player_cards.append(card)
 
 def text_to_speech(text):
     engine = pyttsx3.init()
@@ -178,7 +192,7 @@ def parse_data(results):
     class_names = data['class_name']
 
     all_data = [[a, b] for a, b in zip(coords, class_names)]
-    all_data.sort(key=lambda x: x[0][0])  # Sort x by x values
+    all_data.sort(key=lambda x: x[0][0], reverse=True)  # Sort x by x values
 
     cards = []
     
