@@ -18,6 +18,8 @@ load_dotenv()
 app = FastAPI()
 
 # Mount static files directory
+app.mount("/css", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "css")), name="css")
+app.mount("/js", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "js")), name="js")
 app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "")), name="static")
 
 latest_result = {} # Store latest results so we can serve them over HTTP
